@@ -10,9 +10,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "DEBUG"
 
     POSTGRES_SCHEMA: str = "public"
-    POSTGRES_HOST: str = "localhost"
+    POSTGRES_HOST: str = "postgres"
     POSTGRES_DB: str = "postgres"
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 5433
     POSTGRES_USER: SecretStr = "postgres"
     POSTGRES_PASSWORD: SecretStr = "postgres"
     POSTGRES_RECONNECT_INTERVAL_SEC: int = 1
