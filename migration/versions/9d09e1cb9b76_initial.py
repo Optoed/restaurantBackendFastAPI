@@ -8,7 +8,7 @@ Create Date: 2024-10-14 09:33:50.162970
 from alembic import op
 import sqlalchemy as sa
 
-from project.core.config import settings
+from src.project.core.config import settings
 
 
 # revision identifiers, used by Alembic.
@@ -19,18 +19,14 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table('users',
+    op.create_table('product',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('first_name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
-    sa.Column('last_name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
-    sa.Column('email', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
-    sa.Column('password', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
-    sa.Column('phone_number', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=True),
+    sa.Column('name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
+    sa.Column('cost', sa.Integer(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email'),
     schema=settings.POSTGRES_SCHEMA
     )
 
 
 def downgrade():
-    op.drop_table('users', schema=settings.POSTGRES_SCHEMA)
+    op.drop_table('product', schema=settings.POSTGRES_SCHEMA)

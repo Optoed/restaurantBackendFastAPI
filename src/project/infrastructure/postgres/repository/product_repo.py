@@ -4,10 +4,10 @@ from typing import Type
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-from project.schemas.product import ProductSchema
-from project.infrastructure.postgres.models import Product
+from src.project.schemas.product import ProductSchema
+from src.project.infrastructure.postgres.models import Product
 
-from project.core.config import settings
+from src.project.core.config import settings
 
 
 class ProductRepository:

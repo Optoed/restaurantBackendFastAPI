@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from project.infrastructure.postgres.repository.user_repo import UserRepository
-from project.infrastructure.postgres.database import PostgresDatabase
-from project.schemas.user import UserSchema
+from src.project.infrastructure.postgres.repository.product_repo import ProductRepository
+from src.project.infrastructure.postgres.database import PostgresDatabase
+from src.project.schemas.product import ProductSchema
 
 
 router = APIRouter()
