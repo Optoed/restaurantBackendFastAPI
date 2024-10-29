@@ -2,7 +2,7 @@
 name = "project"
 version = "0.2.0"
 description = ""
-authors = ["CuasarN1 <55405975+CuasarN1@users.noreply.github.com>"]
+authors = ["Optoed"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
