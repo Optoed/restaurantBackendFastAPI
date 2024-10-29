@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from src.project.infrastructure.postgres.repository.product_repo import ProductRepository
 from src.project.infrastructure.postgres.database import PostgresDatabase
