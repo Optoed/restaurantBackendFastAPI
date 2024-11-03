@@ -6,6 +6,7 @@ services:
     restart: always
     volumes:
       - db_data:/var/lib/postgresql/data
+#      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # sql-скрипт на создание и заполнение базы данных
     env_file:
       - .env
     user: ${POSTGRES_USER}
@@ -38,7 +39,6 @@ services:
       context: .
     pull_policy: build
     entrypoint: sh -c "./src/start.sh"
-
 
 networks:
   app_db_network:

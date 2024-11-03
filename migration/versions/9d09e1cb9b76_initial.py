@@ -19,14 +19,44 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table('product',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
-    sa.Column('cost', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    schema=settings.POSTGRES_SCHEMA
+    # Создание таблицы product
+    op.create_table(
+        'product',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
+        sa.Column('cost', sa.Integer(), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        schema=settings.POSTGRES_SCHEMA
+    )
+
+    # Создание таблицы recipe
+    op.create_table(
+        'recipe',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('time_to_cook', sa.Time(), nullable=False),
+        sa.Column('name', sa.String().with_variant(sa.String(length=255), 'postgresql'), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        schema=settings.POSTGRES_SCHEMA
+    )
+
+    # Создание таблицы для связи между рецептами и продуктами
+    op.create_table(
+        'recipe_product',
+        sa.Column('id_recipe', sa.Integer(), nullable=False),
+        sa.Column('id_product', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['id_recipe'], [f'{settings.POSTGRES_SCHEMA}.recipe.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['id_product'], [f'{settings.POSTGRES_SCHEMA}.product.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id_recipe', 'id_product'),
+        schema=settings.POSTGRES_SCHEMA
     )
 
 
 def downgrade():
+    # Удаление таблицы для связи между рецептами и продуктами
+    op.drop_table('recipe_product', schema=settings.POSTGRES_SCHEMA)
+
+    # Удаление таблицы recipe
+    op.drop_table('recipe', schema=settings.POSTGRES_SCHEMA)
+
+    # Удаление таблицы product
     op.drop_table('product', schema=settings.POSTGRES_SCHEMA)

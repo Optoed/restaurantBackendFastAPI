@@ -1,5 +1,14 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 1.4.0 (03.11.2024)
+- заменена restaurant_schema на public в docker-compose
+- однако проблема с alembic upgrade head по-прежнему не решена
+
+# 1.3.0 (03.11.2024)
+- добавлен CRUD для recipe_product (связь many to many таблиц recipe и product)
+- init.sql для создания и заполнения таблиц
+- init.sql в docker-compose
+
 # 1.2.0 (03.11.2024)
 - Добавлены get, post запросы для recipe
 
