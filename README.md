@@ -1,4 +1,4 @@
-# fastapi_docker_postgres_example
+# Backend for the restaurant
 FastApi app with Docker + PostgreSQL study example
 
 Порядок запуска приложения:
