@@ -1,10 +1,12 @@
+import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 
-class ProductSchema(BaseModel):
+class RecipeSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    time_to_cook: datetime.time
     name: str
-    cost: int
 

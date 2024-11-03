@@ -1,5 +1,14 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 1.1.0 (03.11.2024)
+- Добавлены schemas для recipe, recipe_product
+- Добавлены в models recipe, recipe_product
+
+# 1.0.1 (03.11.2024)
+- Убраны некоторые ошибки в стилизации кода:
+    ID заменен на id_product
+    string заменен на str
+
 # 1.0.0 (29.10.2024)
 - Работающие контейнеры Docker
 - Работающие CRUD запросы с таблицей product
