@@ -2,7 +2,9 @@ from fastapi import APIRouter, HTTPException
 
 from src.project.infrastructure.postgres.repository.product_repo import ProductRepository
 from src.project.infrastructure.postgres.database import PostgresDatabase
+from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
 from src.project.schemas.product import ProductSchema
+from src.project.schemas.recipe import RecipeSchema
 
 router = APIRouter()
 
@@ -78,3 +80,33 @@ async def update_product(id: int, product: ProductSchema) -> ProductSchema:
         raise HTTPException(status_code=404, detail="Product not found or failed to update")
 
     return updated_product
+
+
+# recipes:
+
+@router.get("/all_recipes", response_model=list[RecipeSchema])
+async def get_all_products() -> list[RecipeSchema]:
+    recipe_repo = RecipeRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await recipe_repo.check_connection(session=session)
+        all_recipes = await recipe_repo.get_all_recipes(session=session)
+
+    return all_recipes
+
+
+@router.post("/recipe", response_model=RecipeSchema)
+async def insert_product(recipe: RecipeSchema) -> RecipeSchema:
+    recipe_repo = RecipeRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await recipe_repo.check_connection(session=session)
+        new_recipe = await recipe_repo.insert_recipe(session=session, time_to_cook=recipe.time_to_cook,
+                                                      name=recipe.name)
+
+    if not new_recipe:
+        raise HTTPException(status_code=500, detail="Failed to insert product")
+
+    return new_recipe

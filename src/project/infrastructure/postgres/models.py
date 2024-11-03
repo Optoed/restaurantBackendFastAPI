@@ -5,7 +5,7 @@ from src.project.infrastructure.postgres.database import Base
 
 
 class Recipe(Base):
-    __tablename__ = "recipes"
+    __tablename__ = "recipe"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(nullable=False)
@@ -22,7 +22,7 @@ class RecipeProduct(Base):
 
 
 class Product(Base):
-    __tablename__ = "products"
+    __tablename__ = "product"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(nullable=False)

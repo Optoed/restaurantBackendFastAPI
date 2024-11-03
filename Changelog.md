@@ -1,5 +1,8 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 1.2.0 (03.11.2024)
+- Добавлены get, post запросы для recipe
+
 # 1.1.0 (03.11.2024)
 - Добавлены schemas для recipe, recipe_product
 - Добавлены в models recipe, recipe_product

@@ -1,5 +1,8 @@
 from pydantic_settings import BaseSettings
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
+
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -22,4 +25,13 @@ class Settings(BaseSettings):
         return f"postgresql+asyncpg://{creds}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
-settings = Settings()
+try:
+    settings = Settings()
+    print("Настройки успешно загружены.")
+    print("Postgres URL:", settings.postgres_url)
+    print("ORIGINS:", settings.ORIGINS)
+    print("ROOT_PATH:", settings.ROOT_PATH)
+    # and so on for each variable
+except ValidationError as e:
+    print("Ошибка валидации:", e)
+
