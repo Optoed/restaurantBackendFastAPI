@@ -3,19 +3,18 @@ from pydantic import SecretStr
 
 
 class Settings(BaseSettings):
-    # TODO убрать значения по умолчанию при переносе приложения в Docker
-    ORIGINS: str = "*"
-    ROOT_PATH: str = ""
-    ENV: str = "DEV"
-    LOG_LEVEL: str = "DEBUG"
+    ORIGINS: str
+    ROOT_PATH: str
+    ENV: str
+    LOG_LEVEL: str
 
-    POSTGRES_SCHEMA: str = "public"
-    POSTGRES_HOST: str = "postgres"
-    POSTGRES_DB: str = "postgres"
-    POSTGRES_PORT: int = 5433
-    POSTGRES_USER: SecretStr = "postgres"
-    POSTGRES_PASSWORD: SecretStr = "postgres"
-    POSTGRES_RECONNECT_INTERVAL_SEC: int = 1
+    POSTGRES_SCHEMA: str
+    POSTGRES_HOST: str
+    POSTGRES_DB: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: SecretStr
+    POSTGRES_PASSWORD: SecretStr
+    POSTGRES_RECONNECT_INTERVAL_SEC: int
 
     @property
     def postgres_url(self) -> str:

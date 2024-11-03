@@ -1,4 +1,3 @@
-import string
 from typing import Type
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,14 +32,14 @@ class ProductRepository:
 
         return [ProductSchema.model_validate(dict(product)) for product in products.mappings().all()]
 
-    async def get_product_by_ID(
+    async def get_product_by_id(
             self,
             session: AsyncSession,
-            ID: int
-    ) -> ProductSchema:
+            id_product: int
+    ) -> ProductSchema | None:
         query = text(f"select * from {settings.POSTGRES_SCHEMA}.product where id = :id")
 
-        result = await session.execute(query, {"id": ID})
+        result = await session.execute(query, {"id": id_product})
 
         product_row = result.mappings().first()
 
@@ -51,9 +50,9 @@ class ProductRepository:
     async def insert_product(
             self,
             session: AsyncSession,
-            name: string,
+            name: str,
             cost: int
-    ) -> ProductSchema:
+    ) -> ProductSchema | None:
         query = text(f"""
                INSERT INTO {settings.POSTGRES_SCHEMA}.product (name, cost) 
                VALUES (:name, :cost)
@@ -67,26 +66,26 @@ class ProductRepository:
             return ProductSchema.model_validate(dict(product_row))
         return None
 
-    async def delete_product_by_ID(
+    async def delete_product_by_id(
             self,
             session: AsyncSession,
-            ID: int
+            id_product: int
     ) -> bool:
         query = text(f"DELETE FROM {settings.POSTGRES_SCHEMA}.product WHERE id = :id RETURNING id")
 
-        result = await session.execute(query, {"id" : ID})
+        result = await session.execute(query, {"id": id_product})
 
         deleted_row = result.fetchone()
 
         return True if deleted_row else False
 
-    async def update_product_by_ID(
+    async def update_product_by_id(
             self,
             session: AsyncSession,
-            ID: int,
-            name: string,
+            id_product: int,
+            name: str,
             cost: int
-    ) -> ProductSchema:
+    ) -> ProductSchema | None:
         query = text(f"""
                UPDATE {settings.POSTGRES_SCHEMA}.product 
                SET name = :name, cost = :cost 
@@ -94,7 +93,7 @@ class ProductRepository:
                RETURNING id, name, cost
            """)
 
-        result = await session.execute(query, {"id": ID, "name": name, "cost": cost})
+        result = await session.execute(query, {"id": id_product, "name": name, "cost": cost})
 
         updated_row = result.mappings().first()
 
