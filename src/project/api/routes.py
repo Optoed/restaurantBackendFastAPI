@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
 
+from src.project.infrastructure.postgres.repository.dish_repo import DishRepository
 from src.project.infrastructure.postgres.repository.product_repo import ProductRepository
 from src.project.infrastructure.postgres.database import PostgresDatabase
 from src.project.infrastructure.postgres.repository.recipe_product_repo import RecipeProductRepository
 from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
+from src.project.schemas.dish import DishSchema
 from src.project.schemas.product import ProductSchema
 from src.project.schemas.recipe import RecipeSchema
 from src.project.schemas.recipe_product import RecipeProductSchema
@@ -240,3 +242,89 @@ async def update_recipe_product(id_recipe: int, id_product: int, new_id_product:
         raise HTTPException(status_code=404, detail="RecipeProduct not found or failed to update")
 
     return updated_recipe_product
+
+# Dishes CRUD
+
+@router.get("/all_dishes", response_model=list[DishSchema])
+async def get_all_dishes() -> list[DishSchema]:
+    dish_repo = DishRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await dish_repo.check_connection(session=session)
+        all_dishes = await dish_repo.get_all_dishes(session=session)
+
+    return all_dishes
+
+
+@router.get("/dish/{id}", response_model=DishSchema)
+async def get_dish_by_id(id: int) -> DishSchema:
+    dish_repo = DishRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await dish_repo.check_connection(session=session)
+        dish = await dish_repo.get_dish_by_id(session=session, id_dish=id)
+
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    return dish
+
+
+@router.post("/dish", response_model=DishSchema)
+async def insert_dish(dish: DishSchema) -> DishSchema:
+    dish_repo = DishRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await dish_repo.check_connection(session=session)
+        new_dish = await dish_repo.insert_dish(
+            session=session,
+            id_recipe=dish.id_recipe,
+            name=dish.name,
+            cost=dish.cost,
+            rating=dish.rating
+        )
+
+    if not new_dish:
+        raise HTTPException(status_code=500, detail="Failed to insert dish")
+
+    return new_dish
+
+
+@router.put("/dish/{id}", response_model=DishSchema)
+async def update_dish(id: int, dish: DishSchema) -> DishSchema:
+    dish_repo = DishRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await dish_repo.check_connection(session=session)
+        updated_dish = await dish_repo.update_dish_by_id(
+            session=session,
+            id_dish=id,
+            id_recipe=dish.id_recipe,
+            name=dish.name,
+            cost=dish.cost,
+            rating=dish.rating
+        )
+
+    if not updated_dish:
+        raise HTTPException(status_code=404, detail="Dish not found or failed to update")
+
+    return updated_dish
+
+
+@router.delete("/dish/{id}", response_model=dict)
+async def delete_dish(id: int) -> dict:
+    dish_repo = DishRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await dish_repo.check_connection(session=session)
+        deleted = await dish_repo.delete_dish_by_id(session=session, id_dish=id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Dish not found or failed to delete")
+
+    return {"message": "Dish deleted successfully"}

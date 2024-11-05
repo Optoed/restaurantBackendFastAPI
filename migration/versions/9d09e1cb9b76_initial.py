@@ -50,8 +50,23 @@ def upgrade():
         schema=settings.POSTGRES_SCHEMA
     )
 
+    # Создание таблицы dish
+    op.create_table(
+        'dish',
+        sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
+        sa.Column('id_recipe', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=100), nullable=False),
+        sa.Column('cost', sa.Integer(), nullable=False),
+        sa.Column('rating', sa.Numeric(3, 1), nullable=True),
+        sa.ForeignKeyConstraint(['id_recipe'], [f'{settings.POSTGRES_SCHEMA}.recipe.id'], ondelete='CASCADE'),
+        schema=settings.POSTGRES_SCHEMA
+    )
+
 
 def downgrade():
+    # Удаление таблицы dish
+    op.drop_table('dish', schema=settings.POSTGRES_SCHEMA)
+
     # Удаление таблицы для связи между рецептами и продуктами
     op.drop_table('recipe_product', schema=settings.POSTGRES_SCHEMA)
 

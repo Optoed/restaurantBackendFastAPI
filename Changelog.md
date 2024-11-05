@@ -1,5 +1,9 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 1.5.0 (05.11.2024)
+- дописал sqlalchemy.url на свой
+- написал dish
+
 # 1.4.0 (03.11.2024)
 - заменена restaurant_schema на public в docker-compose
 - однако проблема с alembic upgrade head по-прежнему не решена
