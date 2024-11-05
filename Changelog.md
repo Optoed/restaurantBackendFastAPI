@@ -1,5 +1,9 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 1.6.0 (05.11.2024)
+- сделал CRUD для всех остальных таблиц:
+  order, cook, waiter, customer...
+
 # 1.5.0 (05.11.2024)
 - дописал sqlalchemy.url на свой
 - написал dish

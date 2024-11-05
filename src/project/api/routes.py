@@ -1,14 +1,24 @@
 from fastapi import APIRouter, HTTPException
 
+from src.project.infrastructure.postgres.repository.cook_repo import CookRepository
+from src.project.infrastructure.postgres.repository.customer_repo import CustomerRepository
 from src.project.infrastructure.postgres.repository.dish_repo import DishRepository
+from src.project.infrastructure.postgres.repository.order_dish_cook_repo import OrderDishCookRepository
+from src.project.infrastructure.postgres.repository.order_repo import OrderRepository
 from src.project.infrastructure.postgres.repository.product_repo import ProductRepository
 from src.project.infrastructure.postgres.database import PostgresDatabase
 from src.project.infrastructure.postgres.repository.recipe_product_repo import RecipeProductRepository
 from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
+from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRepository
+from src.project.schemas.cook import CookSchema
+from src.project.schemas.customer import CustomerSchema
 from src.project.schemas.dish import DishSchema
+from src.project.schemas.order import OrderSchema
+from src.project.schemas.order_dish_cook import OrderDishCookSchema
 from src.project.schemas.product import ProductSchema
 from src.project.schemas.recipe import RecipeSchema
 from src.project.schemas.recipe_product import RecipeProductSchema
+from src.project.schemas.waiter import WaiterSchema
 
 router = APIRouter()
 
@@ -328,3 +338,329 @@ async def delete_dish(id: int) -> dict:
         raise HTTPException(status_code=404, detail="Dish not found or failed to delete")
 
     return {"message": "Dish deleted successfully"}
+
+
+# Orders CRUD
+
+@router.get("/all_orders", response_model=list[OrderSchema])
+async def get_all_orders() -> list[OrderSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        all_orders = await order_repo.get_all_orders(session=session)
+
+    return all_orders
+
+
+@router.get("/order/{id}", response_model=OrderSchema)
+async def get_order_by_id(id: int) -> OrderSchema:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        order = await order_repo.get_order_by_id(session=session, id_order=id)
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    return order
+
+
+@router.post("/order", response_model=OrderSchema)
+async def insert_order(order: OrderSchema) -> OrderSchema:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        new_order = await order_repo.insert_order(session=session, **order.dict())
+
+    if not new_order:
+        raise HTTPException(status_code=500, detail="Failed to insert order")
+
+    return new_order
+
+
+@router.put("/order/{id}", response_model=OrderSchema)
+async def update_order(id: int, order: OrderSchema) -> OrderSchema:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        updated_order = await order_repo.update_order_by_id(session=session, id_order=id, **order.dict())
+
+    if not updated_order:
+        raise HTTPException(status_code=404, detail="Order not found or failed to update")
+
+    return updated_order
+
+
+@router.delete("/order/{id}", response_model=dict)
+async def delete_order(id: int) -> dict:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        deleted = await order_repo.delete_order_by_id(session=session, id_order=id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Order not found or failed to delete")
+
+    return {"message": "Order deleted successfully"}
+
+
+# Cooks CRUD
+
+@router.get("/all_cooks", response_model=list[CookSchema])
+async def get_all_cooks() -> list[CookSchema]:
+    cook_repo = CookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await cook_repo.check_connection(session=session)
+        all_cooks = await cook_repo.get_all_cooks(session=session)
+
+    return all_cooks
+
+
+@router.get("/cook/{id}", response_model=CookSchema)
+async def get_cook_by_id(id: int) -> CookSchema:
+    cook_repo = CookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await cook_repo.check_connection(session=session)
+        cook = await cook_repo.get_cook_by_id(session=session, id_cook=id)
+
+    if not cook:
+        raise HTTPException(status_code=404, detail="Cook not found")
+
+    return cook
+
+
+@router.post("/cook", response_model=CookSchema)
+async def insert_cook(cook: CookSchema) -> CookSchema:
+    cook_repo = CookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await cook_repo.check_connection(session=session)
+        new_cook = await cook_repo.insert_cook(session=session, **cook.dict())
+
+    if not new_cook:
+        raise HTTPException(status_code=500, detail="Failed to insert cook")
+
+    return new_cook
+
+
+@router.put("/cook/{id}", response_model=CookSchema)
+async def update_cook(id: int, cook: CookSchema) -> CookSchema:
+    cook_repo = CookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await cook_repo.check_connection(session=session)
+        updated_cook = await cook_repo.update_cook_by_id(session=session, id_cook=id, **cook.dict())
+
+    if not updated_cook:
+        raise HTTPException(status_code=404, detail="Cook not found or failed to update")
+
+    return updated_cook
+
+
+@router.delete("/cook/{id}", response_model=dict)
+async def delete_cook(id: int) -> dict:
+    cook_repo = CookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await cook_repo.check_connection(session=session)
+        deleted = await cook_repo.delete_cook_by_id(session=session, id_cook=id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Cook not found or failed to delete")
+
+    return {"message": "Cook deleted successfully"}
+
+
+# Customers CRUD
+
+@router.get("/all_customers", response_model=list[CustomerSchema])
+async def get_all_customers() -> list[CustomerSchema]:
+    customer_repo = CustomerRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await customer_repo.check_connection(session=session)
+        all_customers = await customer_repo.get_all_customers(session=session)
+
+    return all_customers
+
+
+@router.get("/customer/{id}", response_model=CustomerSchema)
+async def get_customer_by_id(id: int) -> CustomerSchema:
+    customer_repo = CustomerRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await customer_repo.check_connection(session=session)
+        customer = await customer_repo.get_customer_by_id(session=session, id_customer=id)
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    return customer
+
+
+@router.post("/customer", response_model=CustomerSchema)
+async def insert_customer(customer: CustomerSchema) -> CustomerSchema:
+    customer_repo = CustomerRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await customer_repo.check_connection(session=session)
+        new_customer = await customer_repo.insert_customer(session=session, **customer.dict())
+
+    if not new_customer:
+        raise HTTPException(status_code=500, detail="Failed to insert customer")
+
+    return new_customer
+
+
+@router.put("/customer/{id}", response_model=CustomerSchema)
+async def update_customer(id: int, customer: CustomerSchema) -> CustomerSchema:
+    customer_repo = CustomerRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await customer_repo.check_connection(session=session)
+        updated_customer = await customer_repo.update_customer_by_id(session=session, id_customer=id, **customer.dict())
+
+    if not updated_customer:
+        raise HTTPException(status_code=404, detail="Customer not found or failed to update")
+
+    return updated_customer
+
+
+@router.delete("/customer/{id}", response_model=dict)
+async def delete_customer(id: int) -> dict:
+    customer_repo = CustomerRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await customer_repo.check_connection(session=session)
+        deleted = await customer_repo.delete_customer_by_id(session=session, id_customer=id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Customer not found or failed to delete")
+
+    return {"message": "Customer deleted successfully"}
+
+
+# Waiters CRUD
+
+@router.get("/all_waiters", response_model=list[WaiterSchema])
+async def get_all_waiters() -> list[WaiterSchema]:
+    waiter_repo = WaiterRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await waiter_repo.check_connection(session=session)
+        all_waiters = await waiter_repo.get_all_waiters(session=session)
+
+    return all_waiters
+
+
+@router.get("/waiter/{id}", response_model=WaiterSchema)
+async def get_waiter_by_id(id: int) -> WaiterSchema:
+    waiter_repo = WaiterRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await waiter_repo.check_connection(session=session)
+        waiter = await waiter_repo.get_waiter_by_id(session=session, id_waiter=id)
+
+    if not waiter:
+        raise HTTPException(status_code=404, detail="Waiter not found")
+
+    return waiter
+
+
+@router.post("/waiter", response_model=WaiterSchema)
+async def insert_waiter(waiter: WaiterSchema) -> WaiterSchema:
+    waiter_repo = WaiterRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await waiter_repo.check_connection(session=session)
+        new_waiter = await waiter_repo.insert_waiter(session=session, **waiter.dict())
+
+    if not new_waiter:
+        raise HTTPException(status_code=500, detail="Failed to insert waiter")
+
+    return new_waiter
+
+
+@router.put("/waiter/{id}", response_model=WaiterSchema)
+async def update_waiter(id: int, waiter: WaiterSchema) -> WaiterSchema:
+    waiter_repo = WaiterRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await waiter_repo.check_connection(session=session)
+        updated_waiter = await waiter_repo.update_waiter_by_id(session=session, id_waiter=id, **waiter.dict())
+
+    if not updated_waiter:
+        raise HTTPException(status_code=404, detail="Waiter not found or failed to update")
+
+    return updated_waiter
+
+
+@router.delete("/waiter/{id}", response_model=dict)
+async def delete_waiter(id: int) -> dict:
+    waiter_repo = WaiterRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await waiter_repo.check_connection(session=session)
+        deleted = await waiter_repo.delete_waiter_by_id(session=session, id_waiter=id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Waiter not found or failed to delete")
+
+    return {"message": "Waiter deleted successfully"}
+
+
+# OrderDishCook CRUD
+
+@router.get("/all_order_dish_cook", response_model=list[OrderDishCookSchema])
+async def get_all_order_dish_cook() -> list[OrderDishCookSchema]:
+    order_dish_cook_repo = OrderDishCookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_dish_cook_repo.check_connection(session=session)
+        all_order_dish_cook = await order_dish_cook_repo.get_all_entries(session=session)
+
+    return all_order_dish_cook
+
+
+@router.get("/order_dish_cook/{id_order}/{id_dish}", response_model=OrderDishCookSchema)
+async def get_order_dish_cook_by_id(id_order: int, id_dish: int) -> OrderDishCookSchema:
+    order_dish_cook_repo = OrderDishCookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_dish_cook_repo.check_connection(session=session)
+        order_dish_cook = await order_dish_cook_repo.get_order_dish_cook_by_id(session=session, id_order=id_order,
+                                                                               id_dish=id_dish)
+
+    if not order_dish_cook:
+        raise HTTPException(status_code=404, detail="OrderDishCook not found")
+
+    return order_dish_cook
