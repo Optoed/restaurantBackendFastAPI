@@ -19,6 +19,20 @@ depends_on = None
 
 
 def upgrade():
+
+    # Create the 'users' table with a foreign key reference to 'roles'
+    op.create_table(
+        'users',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('name', sa.String(length=100), nullable=False),
+        sa.Column('email', sa.String(length=100), nullable=False, unique=True),
+        sa.Column('role', sa.String(length=100), nullable=False),
+        sa.Column('password_hash', sa.String(length=255), nullable=False),
+        sa.ForeignKeyConstraint(['role_id'], ['roles.id'], name='fk_users_roles'),
+        sa.PrimaryKeyConstraint('id', name='users_pkey'),
+        schema=settings.POSTGRES_SCHEMA
+    )
+
     # Создание таблицы product
     op.create_table(
         'product',
@@ -189,6 +203,8 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_table('users')
+
     # Удаление таблицы batch_product
     op.drop_table('batch_product', schema=settings.POSTGRES_SCHEMA)
 

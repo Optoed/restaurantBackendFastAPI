@@ -1,5 +1,12 @@
 ### История изменения проекта по semver (https://semver.org/lang/ru/)
 
+# 2.1.0 (20.11.2024)
+- добавляем таблицу users
+
+# 2.0.0 (06.11.2024)
+- в alembic.ini строку sqlalchemy.url обратно поменял на значение по умолчпанию
+- Добавлены batch, warehouse, supplier, batch_product схемы
+
 # 1.6.0 (05.11.2024)
 - сделал CRUD для всех остальных таблиц:
   order, cook, waiter, customer...

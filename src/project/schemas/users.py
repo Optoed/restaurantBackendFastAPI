@@ -2,10 +2,12 @@
 from pydantic import BaseModel, ConfigDict
 
 
-class WarehouseSchema(BaseModel):
+class UsersSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    location: str
-    how_full: float
+    name: str
+    email: str
+    role: str
+    password_hash: str
 
