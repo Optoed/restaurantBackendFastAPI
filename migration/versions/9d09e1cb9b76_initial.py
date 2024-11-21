@@ -1,7 +1,7 @@
 """initial
 
 Revision ID: 9d09e1cb9b76
-Revises: 
+Revises:
 Create Date: 2024-10-14 09:33:50.162970
 
 """
@@ -28,7 +28,6 @@ def upgrade():
         sa.Column('email', sa.String(length=100), nullable=False, unique=True),
         sa.Column('role', sa.String(length=100), nullable=False),
         sa.Column('password_hash', sa.String(length=255), nullable=False),
-        sa.ForeignKeyConstraint(['role_id'], ['roles.id'], name='fk_users_roles'),
         sa.PrimaryKeyConstraint('id', name='users_pkey'),
         schema=settings.POSTGRES_SCHEMA
     )
