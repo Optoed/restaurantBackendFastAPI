@@ -14,52 +14,55 @@ from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRep
 from src.project.schemas.cook import CookSchema
 from src.project.schemas.customer import CustomerSchema
 from src.project.schemas.dish import DishSchema
+from src.project.schemas.login import LoginSchema
 from src.project.schemas.order import OrderSchema
 from src.project.schemas.order_dish_cook import OrderDishCookSchema
 from src.project.schemas.product import ProductSchema
 from src.project.schemas.recipe import RecipeSchema
 from src.project.schemas.recipe_product import RecipeProductSchema
+from src.project.schemas.register import RegisterSchema
 from src.project.schemas.user import UserSchema
 from src.project.schemas.waiter import WaiterSchema
 
 router = APIRouter()
 
+
 # Registration of User
 
 
 @router.post("/register", response_model=UserSchema)
-async def register(user: UserSchema) -> UserSchema:
+async def register(user: RegisterSchema) -> UserSchema:
     users_repo = UsersRepository()
     database = PostgresDatabase()
 
     # TODO: убери потом
-    if user.role != "admin" and user.role != "user":
+    if user.role not in ["user", "admin"]:
         raise HTTPException(status_code=400, detail="role can be only 'user' or 'admin'")
 
     async with database.session() as session:
         await users_repo.check_connection(session=session)
-        user = await users_repo.register_user(session=session,
-                                              name=user.name,
-                                              email=user.email,
-                                              password_hash=user.password_hash,
-                                              role=user.role)
+        new_user = await users_repo.register_user(session=session,
+                                                  name=user.name,
+                                                  email=user.email,
+                                                  password=user.password,
+                                                  role=user.role)
 
-    if not user:
+    if not new_user:
         raise HTTPException(status_code=500, detail="Failed to register user")
 
-    return user
+    return new_user
 
 
 # TODO: нужно добавить работу с JWT-token
 
 @router.post("/login", response_model=UserSchema)
-async def login(user: UserSchema) -> UserSchema:
+async def login(user: LoginSchema) -> UserSchema:
     users_repo = UsersRepository()
     database = PostgresDatabase()
 
     async with database.session() as session:
         await users_repo.check_connection(session=session)
-        find_user = await users_repo.login_user(session=session, email=user.email, password=user.password_hash)
+        find_user = await users_repo.login_user(session=session, email=user.email, password=user.password)
 
     if not find_user:
         raise HTTPException(status_code=400, detail="User is not found")
@@ -80,6 +83,7 @@ async def get_all_users() -> list[UserSchema]:
         all_users = await users_repo.get_all_users(session=session)
 
     return all_users
+
 
 @router.get("/user/{id}", response_model=UserSchema)
 async def get_user_by_id(id: int) -> UserSchema:
@@ -325,6 +329,7 @@ async def update_recipe_product(id_recipe: int, id_product: int, new_id_product:
         raise HTTPException(status_code=404, detail="RecipeProduct not found or failed to update")
 
     return updated_recipe_product
+
 
 # Dishes CRUD
 

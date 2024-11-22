@@ -1,6 +1,10 @@
 from typing import Type
+
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+
+from src.project.infrastructure.security.bcrypt import hash_password, verify_password
 from src.project.schemas.user import UserSchema
 from src.project.infrastructure.postgres.models import Users
 from src.project.core.config import settings
@@ -38,7 +42,6 @@ class UsersRepository:
             return UserSchema.model_validate(dict(user_row))
         return None
 
-
     async def get_user_by_email(
         self,
         session: AsyncSession,
@@ -57,13 +60,13 @@ class UsersRepository:
         session: AsyncSession,
         name: str,
         email: str,
-        password_hash: str,  # помним что при регистрации пользователь указывает обычный (не хэшированный) пароль
+        password: str,  # помним что при регистрации пользователь указывает обычный (не хэшированный) пароль
         role: str  # Роль как строка, пока что допустим 'admin' и 'user'
     ) -> UserSchema | None:
 
         # TODO: убери потом этот костыль с проверкой на role
-        if role != "user" and role != "admin":
-            return None
+        if role not in ["user", "admin"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
 
         query = text(f"""
             INSERT INTO {settings.POSTGRES_SCHEMA}.users (name, email, password_hash, role) 
@@ -71,24 +74,19 @@ class UsersRepository:
             RETURNING id, name, email, password_hash, role
         """)
 
-        # TODO: Тут нужно добавить middleware на хэширование пароля:
-        # TODO: пользователь указывает password, мы его хэшируем и кладем в бд password_hash
-        # TODO: тут вместо password положим password_hash, как будет реализован
-
-        # TODO: "роль может быть только 'user' или 'admin'
+        # пользователь указывает password, мы его хэшируем и кладем в бд password_hash
+        password_hash = hash_password(password)
 
         # TODO: "либо делаем enum - это чуть сложнее, но гораздо лучше"
         result = await session.execute(query, {"name": name,
                                                "email": email,
                                                "password_hash": password_hash,
                                                "role": role})
-
         user_row = result.mappings().first()
 
         if user_row:
             return UserSchema.model_validate(dict(user_row))
         return None
-
 
     # TODO: допиши логику auth_user, где выдается JWT-token
     # TODO: также мы указываем еще и пароль который сранивается с хэшированным: ДОБАВЬ ПОЛЕ password
@@ -99,23 +97,20 @@ class UsersRepository:
         email: str,
         password: str
     ) -> UserSchema | None:
-        query = text(f"""
-            SELECT * FROM {settings.POSTGRES_SCHEMA}.users
-            WHERE email = :email AND password_hash = :password_hash
-        """)
+        user = await self.get_user_by_email(session=session, email=email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User with such email not found")
 
-        password_hash = password #TODO: добавь sh256 алгоритм хэширования
+        print(password, " ", user.password_hash)
 
-        result = await session.execute(query, {"email": email, "password_hash": password_hash})
+        if not verify_password(password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid password")
 
         #TODO: нужно создать, вернуть токен и добавить его в бд
+        # token = seft.create_jwt_token(user.id, user.role)
+        # return {"user": user, "token": token}
 
-        user_row = result.mappings().first()
-
-        if user_row:
-            return UserSchema.model_validate(dict(user_row))
-        return None
-
+        return user
 
     async def delete_user_by_id(
         self,
