@@ -38,8 +38,7 @@ class UsersRepository:
             return UserSchema.model_validate(dict(user_row))
         return None
 
-    # TODO: допиши логику auth_user, где выдается JWT-token
-    # TODO: также мы указываем еще и пароль который сранивается с хэшированным: ДОБАВЬ ПОЛЕ password
+
     async def get_user_by_email(
         self,
         session: AsyncSession,
@@ -89,6 +88,34 @@ class UsersRepository:
         if user_row:
             return UserSchema.model_validate(dict(user_row))
         return None
+
+
+    # TODO: допиши логику auth_user, где выдается JWT-token
+    # TODO: также мы указываем еще и пароль который сранивается с хэшированным: ДОБАВЬ ПОЛЕ password
+
+    async def login_user(
+        self,
+        session: AsyncSession,
+        email: str,
+        password: str
+    ) -> UserSchema | None:
+        query = text(f"""
+            SELECT * FROM {settings.POSTGRES_SCHEMA}.users
+            WHERE email = :email AND password_hash = :password_hash
+        """)
+
+        password_hash = password #TODO: добавь sh256 алгоритм хэширования
+
+        result = await session.execute(query, {"email": email, "password_hash": password_hash})
+
+        #TODO: нужно создать, вернуть токен и добавить его в бд
+
+        user_row = result.mappings().first()
+
+        if user_row:
+            return UserSchema.model_validate(dict(user_row))
+        return None
+
 
     async def delete_user_by_id(
         self,
