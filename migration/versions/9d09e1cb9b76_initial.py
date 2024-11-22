@@ -202,7 +202,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('users')
+    # удаление таблицы users
+    op.drop_table('users', schema=settings.POSTGRES_SCHEMA)
 
     # Удаление таблицы batch_product
     op.drop_table('batch_product', schema=settings.POSTGRES_SCHEMA)

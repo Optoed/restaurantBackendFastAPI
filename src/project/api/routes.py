@@ -9,6 +9,7 @@ from src.project.infrastructure.postgres.repository.product_repo import ProductR
 from src.project.infrastructure.postgres.database import PostgresDatabase
 from src.project.infrastructure.postgres.repository.recipe_product_repo import RecipeProductRepository
 from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
+from src.project.infrastructure.postgres.repository.users_repo import UsersRepository
 from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRepository
 from src.project.schemas.cook import CookSchema
 from src.project.schemas.customer import CustomerSchema
@@ -18,9 +19,80 @@ from src.project.schemas.order_dish_cook import OrderDishCookSchema
 from src.project.schemas.product import ProductSchema
 from src.project.schemas.recipe import RecipeSchema
 from src.project.schemas.recipe_product import RecipeProductSchema
+from src.project.schemas.user import UserSchema
 from src.project.schemas.waiter import WaiterSchema
 
 router = APIRouter()
+
+# Registration of User
+
+
+@router.post("/register", response_model=UserSchema)
+async def register(user: UserSchema) -> UserSchema:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    # TODO: убери потом
+    if user.role != "admin" and user.role != "user":
+        raise HTTPException(status_code=400, detail="role can be only 'user' or 'admin'")
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        user = await users_repo.register_user(session=session,
+                                              name=user.name,
+                                              email=user.email,
+                                              password_hash=user.password_hash,
+                                              role=user.role)
+
+    if not user:
+        raise HTTPException(status_code=500, detail="Failed to register user")
+
+    return user
+
+
+# TODO: нужно добавить работу с JWT-token
+
+@router.post("/login", response_model=UserSchema)
+async def login(user: UserSchema) -> UserSchema:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        find_user = await users_repo.get_user_by_email(session=session, email=user.email)
+
+    if not find_user:
+        raise HTTPException(status_code=400, detail="User is not found")
+    return find_user
+
+
+# other Users CRUD
+
+
+@router.get("/all_users", response_model=list[UserSchema])
+async def get_all_users() -> list[UserSchema]:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        all_users = await users_repo.get_all_users(session=session)
+
+    return all_users
+
+@router.get("/user/{id}", response_model=UserSchema)
+async def get_user_by_id(id: int) -> UserSchema:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        user = await users_repo.get_user_by_id(session=session, id_user=id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
 
 
 # Products CRUD
