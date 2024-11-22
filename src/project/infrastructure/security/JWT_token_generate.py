@@ -7,17 +7,17 @@ from datetime import datetime, timedelta
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     to_encode = data.copy()
 
-    access_token_expire_minutes = float(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+    access_token_expire_minutes = float(os.getenv("ACCESS_JWT_TOKEN_EXPIRE_MINUTES"))
     if not access_token_expire_minutes:
-        raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES is not set in the environment variables.")
+        raise ValueError("ACCESS_JWT_TOKEN_EXPIRE_MINUTES is not set in the environment variables.")
 
-    secret_key = os.getenv("SECRET_KEY")
+    secret_key = os.getenv("JWT_SECRET_KEY")
     if not secret_key:
-        raise ValueError("SECRET_KEY is not set in the environment variables.")
+        raise ValueError("JWT_SECRET_KEY is not set in the environment variables.")
 
-    algorithm = os.getenv("ALGORITHM")
+    algorithm = os.getenv("HASH_ALGORITHM")
     if not algorithm:
-        raise ValueError("ALGORITHM is not set in the environment variables.")
+        raise ValueError("HASH_ALGORITHM is not set in the environment variables.")
 
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
