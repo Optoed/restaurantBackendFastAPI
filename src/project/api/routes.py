@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from src.project.infrastructure.postgres.repository.cook_repo import CookRepository
 from src.project.infrastructure.postgres.repository.customer_repo import CustomerRepository
@@ -11,6 +11,7 @@ from src.project.infrastructure.postgres.repository.recipe_product_repo import R
 from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
 from src.project.infrastructure.postgres.repository.users_repo import UsersRepository
 from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRepository
+from src.project.infrastructure.security.auth import get_current_user, allow_only_admin
 from src.project.schemas.cook import CookSchema
 from src.project.schemas.customer import CustomerSchema
 from src.project.schemas.dish import DishSchema
@@ -53,28 +54,23 @@ async def register(user: RegisterSchema) -> UserSchema:
     return new_user
 
 
-# TODO: нужно добавить работу с JWT-token
-
-@router.post("/login", response_model=UserSchema)
-async def login(user: LoginSchema) -> UserSchema:
+@router.post("/login")
+async def login(user: LoginSchema) -> dict:
     users_repo = UsersRepository()
     database = PostgresDatabase()
 
     async with database.session() as session:
         await users_repo.check_connection(session=session)
-        find_user = await users_repo.login_user(session=session, email=user.email, password=user.password)
+        auth_response = await users_repo.login_user(session=session, email=user.email, password=user.password)
 
-    if not find_user:
-        raise HTTPException(status_code=400, detail="User is not found")
-
-    return find_user
+    return auth_response
 
 
 # other Users CRUD
 
-
+# Получение всех пользователей (доступно всем с ролью user или admin)
 @router.get("/all_users", response_model=list[UserSchema])
-async def get_all_users() -> list[UserSchema]:
+async def get_all_users(current_user: dict = Depends(get_current_user)) -> list[UserSchema]:
     users_repo = UsersRepository()
     database = PostgresDatabase()
 
@@ -98,6 +94,25 @@ async def get_user_by_id(id: int) -> UserSchema:
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
+
+
+# Удаление пользователя по id (доступно только admin)
+@router.delete("/user/{id}")
+async def delete_user_by_id(
+        id: int,
+        current_user: dict = Depends(allow_only_admin)
+) -> str:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        is_deleted = await users_repo.delete_user_by_id(session=session, id_user=id)
+
+    if is_deleted:
+        return "User was deleted"
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
 
 
 # Products CRUD

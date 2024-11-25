@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: SecretStr
     POSTGRES_RECONNECT_INTERVAL_SEC: int = 1
 
+    # JWT tokens
+    JWT_SECRET_KEY: SecretStr  # чтобы скрыть значение при логах
+    HASH_ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
     @property
     def postgres_url(self) -> str:
         creds = f"{self.POSTGRES_USER.get_secret_value()}:{self.POSTGRES_PASSWORD.get_secret_value()}"
@@ -28,10 +33,5 @@ class Settings(BaseSettings):
 try:
     settings = Settings()
     print("Настройки успешно загружены.")
-    print("Postgres URL:", settings.postgres_url)
-    print("ORIGINS:", settings.ORIGINS)
-    print("ROOT_PATH:", settings.ROOT_PATH)
-    # and so on for each variable
 except ValidationError as e:
     print("Ошибка валидации:", e)
-
