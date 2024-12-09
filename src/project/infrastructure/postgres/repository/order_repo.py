@@ -34,6 +34,14 @@ class OrderRepository:
             for order in result.mappings().all()
         ]
 
+    def get_orders_by_user_id(
+            self,
+            session: AsyncSession,
+            id_user: int
+    ) -> list[OrderSchema]:
+
+        query = text("SELECT * FROM orders where ")
+
     async def get_order_by_id(
             self,
             session: AsyncSession,
@@ -125,3 +133,4 @@ class OrderRepository:
         deleted_row = result.fetchone()
 
         return deleted_row is not None
+

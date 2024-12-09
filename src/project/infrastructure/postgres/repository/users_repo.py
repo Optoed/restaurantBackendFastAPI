@@ -1,3 +1,4 @@
+import logging
 from typing import Type
 
 from fastapi import HTTPException
@@ -8,6 +9,7 @@ from sqlalchemy.testing.pickleable import User
 
 from src.project.infrastructure.security.JWT_token import create_access_token
 from src.project.infrastructure.security.bcrypt import hash_password, verify_password
+from src.project.schemas.customer import CustomerSchema
 from src.project.schemas.user import UserSchema
 from src.project.infrastructure.postgres.models import Users
 from src.project.core.config import settings
@@ -91,6 +93,18 @@ class UsersRepository:
             RETURNING id, name, email, password_hash, role
         """)
 
+        query_customer = text(f"""
+            INSERT INTO {settings.POSTGRES_SCHEMA}.customer (name, rating)
+            VALUES (:name, :rating)
+            RETURNING id, name, rating
+        """)
+
+        query_relate_user_and_customer = text(f"""
+            INSERT INTO {settings.POSTGRES_SCHEMA}.user_customer (id_user, id_customer)
+            VALUES (:id_user, :id_customer)
+            RETURNING id_user, id_customer
+        """)
+
         try:
             result = await session.execute(query, {"name": name,
                                                    "email": email,
@@ -98,8 +112,38 @@ class UsersRepository:
                                                    "role": role})
             user_row = result.mappings().first()
 
+            print("user_row", user_row)
+
+            result_customer = await session.execute(query_customer, {"name": name,
+                                                                     "rating": 0.0})
+
+            customer_row = result_customer.mappings().first()
+
+            print("customer_row", customer_row)
+
+            if not customer_row:
+                raise HTTPException(status_code=500, detail="Error while creating new customer")
+
+            user = UserSchema.model_validate(dict(user_row))
+            customer = CustomerSchema.model_validate(dict(customer_row))
+
+            id_user = user.id
+            id_customer = customer.id
+
+            print("id:", id_user, id_customer)
+
+            result_relate_user_and_customer = await session.execute(query_relate_user_and_customer,
+                                                                    {"id_user": id_user,
+                                                                     "id_customer": id_customer})
+
+            print("relate", result_relate_user_and_customer)
+
+            if not result_relate_user_and_customer.mappings().first():
+                raise HTTPException(status_code=500, detail="Error while creating new relate user_customer")
+
             if user_row:
                 return UserSchema.model_validate(dict(user_row))
+
             return None
 
         except IntegrityError:
@@ -118,7 +162,7 @@ class UsersRepository:
         if not verify_password(password, user.password_hash):
             raise HTTPException(status_code=401, detail="Invalid password")
 
-        token = create_access_token({"user_id": user.id, "role":user.role})
+        token = create_access_token({"user_id": user.id, "role": user.role})
 
         return {"user": user, "access_token": token, "token_type": "bearer"}
 

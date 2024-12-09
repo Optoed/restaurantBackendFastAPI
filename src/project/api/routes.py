@@ -93,10 +93,9 @@ async def get_user_by_id(id: int) -> UserSchema:
 
 
 # Удаление пользователя по id (доступно только admin)
-@router.delete("/user/{id}")
+@router.delete("/user/{id}", dependencies=[Depends(allow_only_admin)])
 async def delete_user_by_id(
-        id: int,
-        current_user: dict = Depends(allow_only_admin)
+        id: int
 ) -> str:
     users_repo = UsersRepository()
     database = PostgresDatabase()
@@ -451,6 +450,18 @@ async def get_all_orders() -> list[OrderSchema]:
         all_orders = await order_repo.get_all_orders(session=session)
 
     return all_orders
+
+
+@router.get("/orders_by_user_id/{id}", response_model=OrderSchema)
+async def get_orders_by_user_id(id: int) -> list[OrderSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        user_orders = await order_repo.get_orders_by_user_id(session=session, id_user=id)
+
+    return user_orders
 
 
 @router.get("/order/{id}", response_model=OrderSchema)

@@ -32,6 +32,17 @@ def upgrade():
         schema=settings.POSTGRES_SCHEMA
     )
 
+    # Создание таблицы для связи между рецептами и продуктами
+    op.create_table(
+        'user_customer',
+        sa.Column('id_user', sa.Integer(), nullable=False),
+        sa.Column('id_customer', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['id_user'], [f'{settings.POSTGRES_SCHEMA}.users.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['id_customer'], [f'{settings.POSTGRES_SCHEMA}.customer.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id_user', 'id_customer'),
+        schema=settings.POSTGRES_SCHEMA
+    )
+
     # Создание таблицы product
     op.create_table(
         'product',
@@ -246,3 +257,6 @@ def downgrade():
 
     # Удаление таблицы product
     op.drop_table('product', schema=settings.POSTGRES_SCHEMA)
+
+    #
+    op.drop_table('user_customer', schema=settings.POSTGRES_SCHEMA)

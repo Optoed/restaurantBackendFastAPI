@@ -15,6 +15,7 @@ class Users(Base):
     role: Mapped[str] = mapped_column(nullable=False)
     password_hash: Mapped[str] = mapped_column(nullable=False)
 
+    customers = relationship("Customer", secondary="user_customer", back_populates="users")
 
 class Recipe(Base):
     __tablename__ = "recipe"
@@ -26,6 +27,12 @@ class Recipe(Base):
     products = relationship("Product", secondary="recipe_product", back_populates="recipes")
     dishes = relationship("Dish", back_populates="recipe")
 
+
+class UserCustomer(Base):
+    __tablename__ = "user_customer"
+
+    id_user: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    id_customer: Mapped[int] = mapped_column(ForeignKey("customer.id"), primary_key=True)
 
 class RecipeProduct(Base):
     __tablename__ = "recipe_product"
@@ -92,7 +99,7 @@ class Customer(Base):
     rating: Mapped[float | None] = mapped_column(nullable=True)
 
     orders = relationship("Order", back_populates="customer")
-
+    users = relationship("User", secondary="user_customer", back_populates="customer")
 
 class Waiter(Base):
     __tablename__ = "waiter"

@@ -37,6 +37,14 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+# Добавление middleware для CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Разрешаем только наш фронтенд
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешаем все методы
+    allow_headers=["*"],  # Разрешаем все заголовки
+)
 
 async def run() -> None:
     config = uvicorn.Config("main:app", host="0.0.0.0", port=8000, reload=False)
