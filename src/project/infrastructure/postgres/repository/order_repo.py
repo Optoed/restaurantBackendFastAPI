@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from src.project.infrastructure.postgres.models import Order
+from src.project.schemas.detailed_orders import DetailedOrdersSchema
 from src.project.schemas.order import OrderSchema
 
 
@@ -34,13 +35,55 @@ class OrderRepository:
             for order in result.mappings().all()
         ]
 
-    def get_orders_by_user_id(
+    async def get_all_detailed_orders(
+            self,
+            session: AsyncSession
+    ) -> list[DetailedOrdersSchema]:
+        query = text("""
+        SELECT 
+            o.id AS id_order,
+            o.id_customer,
+            customer.name AS customer_name,
+            d.name AS dish_name,
+            d.cost AS dish_cost,
+            c.name AS cook_name,
+            o.total_cost,
+            o.status,
+            o.order_date
+        FROM 
+            orders o
+        INNER JOIN 
+            orders_dish_cook odc ON o.id = odc.id_orders
+        INNER JOIN 
+            dish d ON odc.id_dish = d.id
+        INNER JOIN 
+            cook c ON odc.id_cook = c.id
+        INNER JOIN
+            customer ON o.id_customer = customer.id
+        """)
+
+        result = await session.execute(query)
+
+        detailed_orders = result.mappings().all()
+
+        return [
+            DetailedOrdersSchema(**detailed_order)  # Используем распаковку для создания экземпляра
+            for detailed_order in detailed_orders
+        ]
+
+    async def get_orders_by_customer_id(
             self,
             session: AsyncSession,
-            id_user: int
+            id_customer: int
     ) -> list[OrderSchema]:
 
-        query = text("SELECT * FROM orders where ")
+        query = text("SELECT * FROM orders where id_customer = :id_customer")
+        result = await session.execute(query, {"id_customer": id_customer})
+
+        orders = result.mappings().all()
+
+        return [OrderSchema.model_validate(order)
+                for order in orders]
 
     async def get_order_by_id(
             self,

@@ -26,7 +26,7 @@ class OrderDishCookRepository:
             session: AsyncSession
     ) -> list[OrderDishCookSchema]:
 
-        query = "SELECT * FROM order_dish_cook;"
+        query = "SELECT * FROM orders_dish_cook;"
         result = await session.execute(text(query))
 
         return [
@@ -40,7 +40,7 @@ class OrderDishCookRepository:
             id_entry: int
     ) -> OrderDishCookSchema | None:
 
-        query = text("SELECT * FROM order_dish_cook WHERE id = :id")
+        query = text("SELECT * FROM orders_dish_cook WHERE id = :id")
         result = await session.execute(query, {"id": id_entry})
 
         entry_row = result.mappings().first()
@@ -53,7 +53,6 @@ class OrderDishCookRepository:
     async def insert_entry(
             self,
             session: AsyncSession,
-            id: int,
             id_orders: int,
             id_dish: int,
             id_cook: int,
@@ -61,10 +60,12 @@ class OrderDishCookRepository:
     ) -> OrderDishCookSchema | None:
 
         query = text("""
-            INSERT INTO order_dish_cook (id_orders, id_dish, id_cook, status) 
+            INSERT INTO orders_dish_cook (id_orders, id_dish, id_cook, status) 
             VALUES (:id_orders, :id_dish, :id_cook, :status)
             RETURNING id, id_orders, id_dish, id_cook, status
         """)
+
+        print("ID: order, dish, cook:", id_orders, id_dish, id_cook)
 
         result = await session.execute(query, {
             "id_orders": id_orders,
@@ -86,7 +87,7 @@ class OrderDishCookRepository:
             id_entry: int
     ) -> bool:
 
-        query = text("DELETE FROM order_dish_cook WHERE id = :id RETURNING id")
+        query = text("DELETE FROM orders_dish_cook WHERE id = :id RETURNING id")
         result = await session.execute(query, {"id": id_entry})
 
         deleted_row = result.fetchone()

@@ -14,6 +14,7 @@ from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRep
 from src.project.infrastructure.security.auth import get_current_user, allow_only_admin
 from src.project.schemas.cook import CookSchema
 from src.project.schemas.customer import CustomerSchema
+from src.project.schemas.detailed_orders import DetailedOrdersSchema
 from src.project.schemas.dish import DishSchema
 from src.project.schemas.login import LoginSchema
 from src.project.schemas.order import OrderSchema
@@ -66,7 +67,7 @@ async def login(user: LoginSchema) -> dict:
 
 # Получение всех пользователей (доступно всем с ролью user или admin)
 @router.get("/all_users", response_model=list[UserSchema])
-async def get_all_users(current_user: dict = Depends(get_current_user)) -> list[UserSchema]:
+async def get_all_users(current_user: dict = Depends(allow_only_admin)) -> list[UserSchema]:
     users_repo = UsersRepository()
     database = PostgresDatabase()
 
@@ -440,8 +441,20 @@ async def delete_dish(id: int,
 
 # Orders CRUD
 
+@router.get("/all_detailed_orders", response_model=list[DetailedOrdersSchema])
+async def get_all_detailed_orders(current_user: dict = Depends(allow_only_admin)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_all_detailed_orders(session=session)
+
+    return detailed_orders
+
+
 @router.get("/all_orders", response_model=list[OrderSchema])
-async def get_all_orders() -> list[OrderSchema]:
+async def get_all_orders(current_user: dict = Depends(allow_only_admin)) -> list[OrderSchema]:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -452,14 +465,17 @@ async def get_all_orders() -> list[OrderSchema]:
     return all_orders
 
 
-@router.get("/orders_by_user_id/{id}", response_model=OrderSchema)
-async def get_orders_by_user_id(id: int) -> list[OrderSchema]:
+@router.get("/orders_by_customer_id/{id}", response_model=list[OrderSchema])
+async def get_orders_by_customer_id(
+        id: int,
+        current_user: dict = Depends(get_current_user)
+) -> list[OrderSchema]:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
     async with database.session() as session:
         await order_repo.check_connection(session=session)
-        user_orders = await order_repo.get_orders_by_user_id(session=session, id_user=id)
+        user_orders = await order_repo.get_orders_by_customer_id(session=session, id_customer=id)
 
     return user_orders
 
@@ -481,7 +497,7 @@ async def get_order_by_id(id: int) -> OrderSchema:
 
 @router.post("/order", response_model=OrderSchema)
 async def insert_order(order: OrderSchema,
-                       current_user: dict = Depends(allow_only_admin)) -> OrderSchema:
+                       current_user: dict = Depends(get_current_user)) -> OrderSchema:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -771,6 +787,27 @@ async def get_all_order_dish_cook() -> list[OrderDishCookSchema]:
 
     return all_order_dish_cook
 
+
+@router.post("/order_dish_cook", response_model=OrderDishCookSchema)
+async def insert_order_dish_cook(order_dish_cook: OrderDishCookSchema) -> OrderDishCookSchema:
+    order_dish_cook_repo = OrderDishCookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_dish_cook_repo.check_connection(session=session)
+
+        order_dish_cook = await order_dish_cook_repo.insert_entry(
+            session=session,
+            id_orders=order_dish_cook.id_orders,
+            id_dish=order_dish_cook.id_dish,
+            id_cook=order_dish_cook.id_cook,
+            status=order_dish_cook.status
+        )
+
+    if not order_dish_cook:
+        raise HTTPException(status_code=404, detail="OrderDishCook not found")
+
+    return order_dish_cook
 
 @router.get("/order_dish_cook/{id_order}/{id_dish}", response_model=OrderDishCookSchema)
 async def get_order_dish_cook_by_id(id_order: int, id_dish: int) -> OrderDishCookSchema:

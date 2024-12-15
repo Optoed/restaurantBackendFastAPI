@@ -164,7 +164,17 @@ class UsersRepository:
 
         token = create_access_token({"user_id": user.id, "role": user.role})
 
-        return {"user": user, "access_token": token, "token_type": "bearer"}
+        query_get_id_customer = text(f"""
+                    SELECT id_customer FROM {settings.POSTGRES_SCHEMA}.user_customer
+                    WHERE id_user = :id_user
+                """)
+
+        result_get_id_customer = await session.execute(query_get_id_customer,
+                                                       {"id_user": user.id})
+
+        customerId = result_get_id_customer.mappings().first().id_customer
+
+        return {"user": user, "customerId": customerId, "access_token": token, "token_type": "bearer"}
 
     async def delete_user_by_id(
         self,
