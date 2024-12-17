@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import APIRouter, HTTPException, Depends
 
 from src.project.infrastructure.postgres.repository.cook_repo import CookRepository
@@ -449,6 +451,65 @@ async def get_all_detailed_orders(current_user: dict = Depends(allow_only_admin)
     async with database.session() as session:
         await order_repo.check_connection(session=session)
         detailed_orders = await order_repo.get_all_detailed_orders(session=session)
+
+    return detailed_orders
+
+
+# хранимые процедуры
+
+@router.get("/detailed_orders_by_date_range/{id}", response_model=list[DetailedOrdersSchema])
+async def get_detailed_orders_by_date_range_and_id(
+        id: int,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        current_user: dict = Depends(get_current_user)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_detailed_orders_by_customer_id(
+            session=session,
+            id=id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+    return detailed_orders
+
+
+@router.get("/all_detailed_orders_by_date_range", response_model=list[DetailedOrdersSchema])
+async def get_all_detailed_orders_by_date_range(
+        start_date: str,
+        end_date: str,
+        current_user: dict = Depends(allow_only_admin),
+) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_all_detailed_orders_by_date_range(
+            session=session,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+    return detailed_orders
+
+
+# процедуры
+
+@router.get("/detailed_orders_/{id}", response_model=list[DetailedOrdersSchema])
+async def get_detailed_orders_by_customer_id(
+        id: int,
+        current_user: dict = Depends(get_current_user)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_detailed_orders_by_customer_id(session=session, id=id)
 
     return detailed_orders
 
