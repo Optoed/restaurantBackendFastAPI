@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from src.project.infrastructure.postgres.models import Order
+from src.project.schemas.detailed_orders import DetailedOrdersSchema
 from src.project.schemas.order import OrderSchema
 
 
@@ -33,6 +34,142 @@ class OrderRepository:
             OrderSchema.model_validate(dict(order))
             for order in result.mappings().all()
         ]
+
+    async def get_all_detailed_orders(
+            self,
+            session: AsyncSession
+    ) -> list[DetailedOrdersSchema]:
+        query = text("""
+        SELECT 
+            o.id AS id_order,
+            o.id_customer,
+            customer.name AS customer_name,
+            d.name AS dish_name,
+            d.cost AS dish_cost,
+            c.name AS cook_name,
+            o.total_cost,
+            o.status,
+            o.order_date
+        FROM 
+            orders o
+        INNER JOIN 
+            orders_dish_cook odc ON o.id = odc.id_orders
+        INNER JOIN 
+            dish d ON odc.id_dish = d.id
+        INNER JOIN 
+            cook c ON odc.id_cook = c.id
+        INNER JOIN
+            customer ON o.id_customer = customer.id
+        """)
+
+        result = await session.execute(query)
+
+        detailed_orders = result.mappings().all()
+
+        return [
+            DetailedOrdersSchema(**detailed_order)  # Используем распаковку для создания экземпляра
+            for detailed_order in detailed_orders
+        ]
+
+    async def get_detailed_orders_by_customer_id(
+            self,
+            session: AsyncSession,
+            id: int
+    ) -> list[DetailedOrdersSchema]:
+        query = text("""
+                SELECT 
+                    o.id AS id_order,
+                    o.id_customer,
+                    customer.name AS customer_name,
+                    d.name AS dish_name,
+                    d.cost AS dish_cost,
+                    c.name AS cook_name,
+                    o.total_cost,
+                    o.status,
+                    o.order_date
+                FROM 
+                    orders o
+                INNER JOIN 
+                    orders_dish_cook odc ON o.id = odc.id_orders
+                INNER JOIN 
+                    dish d ON odc.id_dish = d.id
+                INNER JOIN 
+                    cook c ON odc.id_cook = c.id
+                INNER JOIN
+                    customer ON o.id_customer = customer.id
+                WHERE o.id_customer = :id
+                """)
+
+        result = await session.execute(query, {"id": id})
+
+        detailed_orders = result.mappings().all()
+
+        return [
+            DetailedOrdersSchema(**detailed_order)  # Используем распаковку для создания экземпляра
+            for detailed_order in detailed_orders
+        ]
+
+
+    ####################### процедуры
+
+    async def get_all_detailed_orders_by_date_range(
+            self,
+            session: AsyncSession,
+            start_date: str,
+            end_date: str
+    ) -> list[DetailedOrdersSchema]:
+        query = text("""
+        SELECT * FROM GetDetailedOrdersByDateRange(:start_date, :end_date);
+        """)
+
+        result = await session.execute(query, {'start_date': start_date, 'end_date': end_date})
+
+        detailed_orders = result.mappings().all()
+
+        return [
+            DetailedOrdersSchema(**detailed_order)  # Используем распаковку для создания экземпляра
+            for detailed_order in detailed_orders
+        ]
+
+    async def get_detailed_orders_by_date_range_and_customer(
+            self,
+            session: AsyncSession,
+            start_date: str,
+            end_date: str,
+            customer_id: int
+    ) -> list[DetailedOrdersSchema]:
+        query = text("""
+        SELECT * FROM GetDetailedOrdersByDateRangeAndCustomer(:start_date, :end_date, :customer_id);
+        """)
+
+        result = await session.execute(query,
+                                       {'start_date': start_date,
+                                        'end_date': end_date,
+                                        'customer_id': customer_id})
+
+        detailed_orders = result.mappings().all()
+
+        return [
+            DetailedOrdersSchema(**detailed_order)  # Используем распаковку для создания экземпляра
+            for detailed_order in detailed_orders
+        ]
+
+
+################################
+
+    async def get_orders_by_customer_id(
+            self,
+            session: AsyncSession,
+            id_customer: int
+    ) -> list[OrderSchema]:
+
+        query = text("SELECT * FROM orders where id_customer = :id_customer")
+        result = await session.execute(query, {"id_customer": id_customer})
+
+        orders = result.mappings().all()
+
+        return [OrderSchema.model_validate(order)
+                for order in orders]
 
     async def get_order_by_id(
             self,
@@ -125,3 +262,4 @@ class OrderRepository:
         deleted_row = result.fetchone()
 
         return deleted_row is not None
+

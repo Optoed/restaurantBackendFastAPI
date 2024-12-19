@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+import datetime
+
+from fastapi import APIRouter, HTTPException, Depends
 
 from src.project.infrastructure.postgres.repository.cook_repo import CookRepository
 from src.project.infrastructure.postgres.repository.customer_repo import CustomerRepository
@@ -9,18 +11,106 @@ from src.project.infrastructure.postgres.repository.product_repo import ProductR
 from src.project.infrastructure.postgres.database import PostgresDatabase
 from src.project.infrastructure.postgres.repository.recipe_product_repo import RecipeProductRepository
 from src.project.infrastructure.postgres.repository.recipe_repo import RecipeRepository
+from src.project.infrastructure.postgres.repository.users_repo import UsersRepository
 from src.project.infrastructure.postgres.repository.waiter_repo import WaiterRepository
+from src.project.infrastructure.security.auth import get_current_user, allow_only_admin
 from src.project.schemas.cook import CookSchema
 from src.project.schemas.customer import CustomerSchema
+from src.project.schemas.detailed_orders import DetailedOrdersSchema
 from src.project.schemas.dish import DishSchema
+from src.project.schemas.login import LoginSchema
 from src.project.schemas.order import OrderSchema
 from src.project.schemas.order_dish_cook import OrderDishCookSchema
 from src.project.schemas.product import ProductSchema
 from src.project.schemas.recipe import RecipeSchema
 from src.project.schemas.recipe_product import RecipeProductSchema
+from src.project.schemas.register import RegisterSchema
+from src.project.schemas.user import UserSchema
 from src.project.schemas.waiter import WaiterSchema
 
 router = APIRouter()
+
+
+# Registration of User
+
+
+@router.post("/register", response_model=UserSchema)
+async def register(user: RegisterSchema) -> UserSchema:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        new_user = await users_repo.register_user(session=session,
+                                                  name=user.name,
+                                                  email=user.email,
+                                                  password=user.password,
+                                                  role=user.role)
+
+    if not new_user:
+        raise HTTPException(status_code=500, detail="Failed to register user")
+
+    return new_user
+
+
+@router.post("/login")
+async def login(user: LoginSchema) -> dict:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        auth_response = await users_repo.login_user(session=session, email=user.email, password=user.password)
+
+    return auth_response
+
+
+# other Users CRUD
+
+# Получение всех пользователей (доступно всем с ролью user или admin)
+@router.get("/all_users", response_model=list[UserSchema])
+async def get_all_users(current_user: dict = Depends(allow_only_admin)) -> list[UserSchema]:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        all_users = await users_repo.get_all_users(session=session)
+
+    return all_users
+
+
+@router.get("/user/{id}", response_model=UserSchema)
+async def get_user_by_id(id: int) -> UserSchema:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        user = await users_repo.get_user_by_id(session=session, id_user=id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+# Удаление пользователя по id (доступно только admin)
+@router.delete("/user/{id}", dependencies=[Depends(allow_only_admin)])
+async def delete_user_by_id(
+        id: int
+) -> str:
+    users_repo = UsersRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await users_repo.check_connection(session=session)
+        is_deleted = await users_repo.delete_user_by_id(session=session, id_user=id)
+
+    if is_deleted:
+        return "User was deleted"
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
 
 
 # Products CRUD
@@ -53,7 +143,7 @@ async def get_product_by_id(id: int) -> ProductSchema:
 
 
 @router.post("/product", response_model=ProductSchema)
-async def insert_product(product: ProductSchema) -> ProductSchema:
+async def insert_product(product: ProductSchema, current_user: dict = Depends(allow_only_admin)) -> ProductSchema:
     product_repo = ProductRepository()
     database = PostgresDatabase()
 
@@ -68,7 +158,7 @@ async def insert_product(product: ProductSchema) -> ProductSchema:
 
 
 @router.delete("/product/{id}", response_model=dict)
-async def delete_product(id: int) -> dict:
+async def delete_product(id: int, current_user: dict = Depends(allow_only_admin)) -> dict:
     product_repo = ProductRepository()
     database = PostgresDatabase()
 
@@ -83,7 +173,8 @@ async def delete_product(id: int) -> dict:
 
 
 @router.put("/product/{id}", response_model=ProductSchema)
-async def update_product(id: int, product: ProductSchema) -> ProductSchema:
+async def update_product(id: int, product: ProductSchema,
+                         current_user: dict = Depends(allow_only_admin)) -> ProductSchema:
     product_repo = ProductRepository()
     database = PostgresDatabase()
 
@@ -128,7 +219,8 @@ async def get_recipe_by_id(id: int) -> RecipeSchema:
 
 
 @router.post("/recipe", response_model=RecipeSchema)
-async def insert_recipe(recipe: RecipeSchema) -> RecipeSchema:
+async def insert_recipe(recipe: RecipeSchema,
+                        current_user: dict = Depends(allow_only_admin)) -> RecipeSchema:
     recipe_repo = RecipeRepository()
     database = PostgresDatabase()
 
@@ -144,7 +236,8 @@ async def insert_recipe(recipe: RecipeSchema) -> RecipeSchema:
 
 
 @router.put("/recipe/{id}", response_model=RecipeSchema)
-async def update_recipe(id: int, recipe: RecipeSchema) -> RecipeSchema:
+async def update_recipe(id: int, recipe: RecipeSchema,
+                        current_user: dict = Depends(allow_only_admin)) -> RecipeSchema:
     recipe_repo = RecipeRepository()
     database = PostgresDatabase()
 
@@ -160,7 +253,8 @@ async def update_recipe(id: int, recipe: RecipeSchema) -> RecipeSchema:
 
 
 @router.delete("/recipe/{id}", response_model=dict)
-async def delete_recipe(id: int) -> dict:
+async def delete_recipe(id: int,
+                        current_user: dict = Depends(allow_only_admin)) -> dict:
     recipe_repo = RecipeRepository()
     database = PostgresDatabase()
 
@@ -205,7 +299,8 @@ async def get_recipe_product_by_id(id_recipe: int, id_product: int) -> RecipePro
 
 
 @router.post("/recipe_product", response_model=RecipeProductSchema)
-async def insert_recipe_product(recipe_product: RecipeProductSchema) -> RecipeProductSchema:
+async def insert_recipe_product(recipe_product: RecipeProductSchema,
+                                current_user: dict = Depends(allow_only_admin)) -> RecipeProductSchema:
     recipe_product_repo = RecipeProductRepository()
     database = PostgresDatabase()
 
@@ -222,7 +317,8 @@ async def insert_recipe_product(recipe_product: RecipeProductSchema) -> RecipePr
 
 
 @router.delete("/recipe_product/{id_recipe}/{id_product}", response_model=dict)
-async def delete_recipe_product(id_recipe: int, id_product: int) -> dict:
+async def delete_recipe_product(id_recipe: int, id_product: int,
+                                current_user: dict = Depends(allow_only_admin)) -> dict:
     recipe_product_repo = RecipeProductRepository()
     database = PostgresDatabase()
 
@@ -238,7 +334,8 @@ async def delete_recipe_product(id_recipe: int, id_product: int) -> dict:
 
 
 @router.put("/recipe_product/{id_recipe}/{id_product}", response_model=RecipeProductSchema)
-async def update_recipe_product(id_recipe: int, id_product: int, new_id_product: int) -> RecipeProductSchema:
+async def update_recipe_product(id_recipe: int, id_product: int, new_id_product: int,
+                                current_user: dict = Depends(allow_only_admin)) -> RecipeProductSchema:
     recipe_product_repo = RecipeProductRepository()
     database = PostgresDatabase()
 
@@ -252,6 +349,7 @@ async def update_recipe_product(id_recipe: int, id_product: int, new_id_product:
         raise HTTPException(status_code=404, detail="RecipeProduct not found or failed to update")
 
     return updated_recipe_product
+
 
 # Dishes CRUD
 
@@ -283,7 +381,8 @@ async def get_dish_by_id(id: int) -> DishSchema:
 
 
 @router.post("/dish", response_model=DishSchema)
-async def insert_dish(dish: DishSchema) -> DishSchema:
+async def insert_dish(dish: DishSchema,
+                      current_user: dict = Depends(allow_only_admin)) -> DishSchema:
     dish_repo = DishRepository()
     database = PostgresDatabase()
 
@@ -304,7 +403,8 @@ async def insert_dish(dish: DishSchema) -> DishSchema:
 
 
 @router.put("/dish/{id}", response_model=DishSchema)
-async def update_dish(id: int, dish: DishSchema) -> DishSchema:
+async def update_dish(id: int, dish: DishSchema,
+                      current_user: dict = Depends(allow_only_admin)) -> DishSchema:
     dish_repo = DishRepository()
     database = PostgresDatabase()
 
@@ -326,7 +426,8 @@ async def update_dish(id: int, dish: DishSchema) -> DishSchema:
 
 
 @router.delete("/dish/{id}", response_model=dict)
-async def delete_dish(id: int) -> dict:
+async def delete_dish(id: int,
+                      current_user: dict = Depends(allow_only_admin)) -> dict:
     dish_repo = DishRepository()
     database = PostgresDatabase()
 
@@ -342,8 +443,79 @@ async def delete_dish(id: int) -> dict:
 
 # Orders CRUD
 
+@router.get("/all_detailed_orders", response_model=list[DetailedOrdersSchema])
+async def get_all_detailed_orders(current_user: dict = Depends(allow_only_admin)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_all_detailed_orders(session=session)
+
+    return detailed_orders
+
+
+# хранимые процедуры
+
+@router.get("/detailed_orders_by_date_range/{id}", response_model=list[DetailedOrdersSchema])
+async def get_detailed_orders_by_date_range_and_id(
+        id: int,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        current_user: dict = Depends(get_current_user)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_detailed_orders_by_customer_id(
+            session=session,
+            id=id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+    return detailed_orders
+
+
+@router.get("/all_detailed_orders_by_date_range", response_model=list[DetailedOrdersSchema])
+async def get_all_detailed_orders_by_date_range(
+        start_date: str,
+        end_date: str,
+        current_user: dict = Depends(allow_only_admin),
+) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_all_detailed_orders_by_date_range(
+            session=session,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+    return detailed_orders
+
+
+# процедуры
+
+@router.get("/detailed_orders_/{id}", response_model=list[DetailedOrdersSchema])
+async def get_detailed_orders_by_customer_id(
+        id: int,
+        current_user: dict = Depends(get_current_user)) -> list[DetailedOrdersSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        detailed_orders = await order_repo.get_detailed_orders_by_customer_id(session=session, id=id)
+
+    return detailed_orders
+
+
 @router.get("/all_orders", response_model=list[OrderSchema])
-async def get_all_orders() -> list[OrderSchema]:
+async def get_all_orders(current_user: dict = Depends(allow_only_admin)) -> list[OrderSchema]:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -352,6 +524,21 @@ async def get_all_orders() -> list[OrderSchema]:
         all_orders = await order_repo.get_all_orders(session=session)
 
     return all_orders
+
+
+@router.get("/orders_by_customer_id/{id}", response_model=list[OrderSchema])
+async def get_orders_by_customer_id(
+        id: int,
+        current_user: dict = Depends(get_current_user)
+) -> list[OrderSchema]:
+    order_repo = OrderRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_repo.check_connection(session=session)
+        user_orders = await order_repo.get_orders_by_customer_id(session=session, id_customer=id)
+
+    return user_orders
 
 
 @router.get("/order/{id}", response_model=OrderSchema)
@@ -370,7 +557,8 @@ async def get_order_by_id(id: int) -> OrderSchema:
 
 
 @router.post("/order", response_model=OrderSchema)
-async def insert_order(order: OrderSchema) -> OrderSchema:
+async def insert_order(order: OrderSchema,
+                       current_user: dict = Depends(get_current_user)) -> OrderSchema:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -385,7 +573,8 @@ async def insert_order(order: OrderSchema) -> OrderSchema:
 
 
 @router.put("/order/{id}", response_model=OrderSchema)
-async def update_order(id: int, order: OrderSchema) -> OrderSchema:
+async def update_order(id: int, order: OrderSchema,
+                       current_user: dict = Depends(allow_only_admin)) -> OrderSchema:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -400,7 +589,8 @@ async def update_order(id: int, order: OrderSchema) -> OrderSchema:
 
 
 @router.delete("/order/{id}", response_model=dict)
-async def delete_order(id: int) -> dict:
+async def delete_order(id: int,
+                       current_user: dict = Depends(allow_only_admin)) -> dict:
     order_repo = OrderRepository()
     database = PostgresDatabase()
 
@@ -444,7 +634,8 @@ async def get_cook_by_id(id: int) -> CookSchema:
 
 
 @router.post("/cook", response_model=CookSchema)
-async def insert_cook(cook: CookSchema) -> CookSchema:
+async def insert_cook(cook: CookSchema,
+                      current_user: dict = Depends(allow_only_admin)) -> CookSchema:
     cook_repo = CookRepository()
     database = PostgresDatabase()
 
@@ -459,7 +650,8 @@ async def insert_cook(cook: CookSchema) -> CookSchema:
 
 
 @router.put("/cook/{id}", response_model=CookSchema)
-async def update_cook(id: int, cook: CookSchema) -> CookSchema:
+async def update_cook(id: int, cook: CookSchema,
+                      current_user: dict = Depends(allow_only_admin)) -> CookSchema:
     cook_repo = CookRepository()
     database = PostgresDatabase()
 
@@ -474,7 +666,8 @@ async def update_cook(id: int, cook: CookSchema) -> CookSchema:
 
 
 @router.delete("/cook/{id}", response_model=dict)
-async def delete_cook(id: int) -> dict:
+async def delete_cook(id: int,
+                      current_user: dict = Depends(allow_only_admin)) -> dict:
     cook_repo = CookRepository()
     database = PostgresDatabase()
 
@@ -518,7 +711,8 @@ async def get_customer_by_id(id: int) -> CustomerSchema:
 
 
 @router.post("/customer", response_model=CustomerSchema)
-async def insert_customer(customer: CustomerSchema) -> CustomerSchema:
+async def insert_customer(customer: CustomerSchema,
+                          current_user: dict = Depends(allow_only_admin)) -> CustomerSchema:
     customer_repo = CustomerRepository()
     database = PostgresDatabase()
 
@@ -533,7 +727,8 @@ async def insert_customer(customer: CustomerSchema) -> CustomerSchema:
 
 
 @router.put("/customer/{id}", response_model=CustomerSchema)
-async def update_customer(id: int, customer: CustomerSchema) -> CustomerSchema:
+async def update_customer(id: int, customer: CustomerSchema,
+                          current_user: dict = Depends(allow_only_admin)) -> CustomerSchema:
     customer_repo = CustomerRepository()
     database = PostgresDatabase()
 
@@ -548,7 +743,8 @@ async def update_customer(id: int, customer: CustomerSchema) -> CustomerSchema:
 
 
 @router.delete("/customer/{id}", response_model=dict)
-async def delete_customer(id: int) -> dict:
+async def delete_customer(id: int,
+                          current_user: dict = Depends(allow_only_admin)) -> dict:
     customer_repo = CustomerRepository()
     database = PostgresDatabase()
 
@@ -592,7 +788,8 @@ async def get_waiter_by_id(id: int) -> WaiterSchema:
 
 
 @router.post("/waiter", response_model=WaiterSchema)
-async def insert_waiter(waiter: WaiterSchema) -> WaiterSchema:
+async def insert_waiter(waiter: WaiterSchema,
+                        current_user: dict = Depends(allow_only_admin)) -> WaiterSchema:
     waiter_repo = WaiterRepository()
     database = PostgresDatabase()
 
@@ -607,7 +804,8 @@ async def insert_waiter(waiter: WaiterSchema) -> WaiterSchema:
 
 
 @router.put("/waiter/{id}", response_model=WaiterSchema)
-async def update_waiter(id: int, waiter: WaiterSchema) -> WaiterSchema:
+async def update_waiter(id: int, waiter: WaiterSchema,
+                        current_user: dict = Depends(allow_only_admin)) -> WaiterSchema:
     waiter_repo = WaiterRepository()
     database = PostgresDatabase()
 
@@ -622,7 +820,8 @@ async def update_waiter(id: int, waiter: WaiterSchema) -> WaiterSchema:
 
 
 @router.delete("/waiter/{id}", response_model=dict)
-async def delete_waiter(id: int) -> dict:
+async def delete_waiter(id: int,
+                        current_user: dict = Depends(allow_only_admin)) -> dict:
     waiter_repo = WaiterRepository()
     database = PostgresDatabase()
 
@@ -649,6 +848,27 @@ async def get_all_order_dish_cook() -> list[OrderDishCookSchema]:
 
     return all_order_dish_cook
 
+
+@router.post("/order_dish_cook", response_model=OrderDishCookSchema)
+async def insert_order_dish_cook(order_dish_cook: OrderDishCookSchema) -> OrderDishCookSchema:
+    order_dish_cook_repo = OrderDishCookRepository()
+    database = PostgresDatabase()
+
+    async with database.session() as session:
+        await order_dish_cook_repo.check_connection(session=session)
+
+        order_dish_cook = await order_dish_cook_repo.insert_entry(
+            session=session,
+            id_orders=order_dish_cook.id_orders,
+            id_dish=order_dish_cook.id_dish,
+            id_cook=order_dish_cook.id_cook,
+            status=order_dish_cook.status
+        )
+
+    if not order_dish_cook:
+        raise HTTPException(status_code=404, detail="OrderDishCook not found")
+
+    return order_dish_cook
 
 @router.get("/order_dish_cook/{id_order}/{id_dish}", response_model=OrderDishCookSchema)
 async def get_order_dish_cook_by_id(id_order: int, id_dish: int) -> OrderDishCookSchema:
